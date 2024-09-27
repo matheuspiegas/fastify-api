@@ -1,17 +1,10 @@
 import fastify from "fastify";
 import { fastifyJwt } from "@fastify/jwt";
-import {
-	serializerCompiler,
-	validatorCompiler,
-} from "fastify-type-provider-zod";
 import { protectedRoute } from "./routes/protected";
 import { userRoutes } from "./routes/user-routes";
 import { env } from "./env";
 
 export const app = fastify();
-
-app.setValidatorCompiler(validatorCompiler);
-app.setSerializerCompiler(serializerCompiler);
 
 app.register(fastifyJwt, {
 	secret: env.JWT_SECRET,
