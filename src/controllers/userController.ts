@@ -14,7 +14,11 @@ export class UserController {
 	async register(req: FastifyRequest, reply: FastifyReply) {
 		const { success, data, error } = registerRouteSchema.safeParse(req.body);
 		if (!success) {
-			reply.code(400).send({ error: error.errors });
+			reply.code(400).send({
+				errors: error.errors.map((e) => {
+					return { path: e.path[0], message: e.message };
+				}),
+			});
 			return;
 		}
 
@@ -44,7 +48,11 @@ export class UserController {
 	async login(req: FastifyRequest, reply: FastifyReply) {
 		const { success, data, error } = loginRouteSchema.safeParse(req.body);
 		if (!success) {
-			reply.code(400).send({ error: error.errors });
+			reply.code(400).send({
+				errors: error.errors.map((e) => {
+					return { path: e.path[0], message: e.message };
+				}),
+			});
 			return;
 		}
 		if (success) {
@@ -56,7 +64,13 @@ export class UserController {
 			}
 			const passwordMatch = await bcrypt.compare(password, user.password);
 			if (passwordMatch) {
-				reply.send({ token: this.app.jwt.sign({ username, id: user.id }) });
+				reply.send({
+					id: user.id,
+					username: user.username,
+					name: user.name,
+					email: user.email,
+					token: this.app.jwt.sign({ username, id: user.id }),
+				});
 			}
 			reply.code(401).send({ message: "Invalid username or password" });
 		}
