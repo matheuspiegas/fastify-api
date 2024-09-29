@@ -11,4 +11,5 @@ export const userRoutes = async (fastify: FastifyInstance) => {
 	const userController = new UserController(userServices, fastify);
 	fastify.post("/auth/register", userController.register.bind(userController));
 	fastify.post("/auth/login", userController.login.bind(userController));
+	fastify.put("/user/:id", userController.updateProfile.bind(userController))
 };
