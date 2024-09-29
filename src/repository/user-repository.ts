@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import type { CreateUserSchema } from "../schemas/user-schemas.ts";
+import type { RegisterUserSchema } from "../schemas/user-schemas.ts";
 
 export class UserRepository {
 	database: PrismaClient;
@@ -11,6 +11,15 @@ export class UserRepository {
 		const user = await this.database.user.findUnique({
 			where: {
 				email,
+			},
+		});
+		return user;
+	};
+
+	findUserById =async (id: string) => {
+		const user = await this.database.user.findUnique({
+			where: {
+				id,
 			},
 		});
 		return user;
@@ -30,7 +39,7 @@ export class UserRepository {
 		password,
 		username,
 		name,
-	}: CreateUserSchema) => {
+	}: RegisterUserSchema) => {
 		const user = await this.database.user.create({
 			data: {
 				email,
@@ -41,4 +50,16 @@ export class UserRepository {
 		});
 		return user;
 	};
+
+	updateUser = async (user: RegisterUserSchema) => {
+		const userMap = new Map(Object.entries(user))
+		const existingUser = await this.findUserByUsername(user.username)
+		if(existingUser) {
+			const existingUserMap = new Map(Object.entries(user))
+			const userUpdateSomething = userMap
+			
+		}
+
+
+	}
 }
