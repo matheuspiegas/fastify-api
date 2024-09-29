@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { UserServices } from "../services/user-services";
 import bcrypt from "bcryptjs";
-import { loginRouteSchema, registerRouteSchema } from "../schemas/user-schemas";
+import { loginRouteSchema, registerUserSchema } from "../schemas/user-schemas";
 
 export class UserController {
 	services: UserServices;
@@ -12,7 +12,7 @@ export class UserController {
 	}
 
 	async register(req: FastifyRequest, reply: FastifyReply) {
-		const { success, data, error } = registerRouteSchema.safeParse(req.body);
+		const { success, data, error } = registerUserSchema.safeParse(req.body);
 		if (!success) {
 			reply.code(400).send({
 				errors: error.errors.map((e) => {
@@ -74,5 +74,9 @@ export class UserController {
 			}
 			reply.code(401).send({ message: "Invalid username or password" });
 		}
+	}
+
+	async updateProfile(req: FastifyRequest, reply: FastifyReply) {
+		
 	}
 }
