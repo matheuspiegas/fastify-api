@@ -1,6 +1,5 @@
 import fastify from "fastify";
 import { fastifyJwt } from "@fastify/jwt";
-import { protectedRoute } from "./routes/protected";
 import { userRoutes } from "./routes/user-routes";
 import { env } from "./env";
 
@@ -10,7 +9,6 @@ app.register(fastifyJwt, {
 	secret: env.JWT_SECRET,
 });
 app.register(userRoutes);
-app.register(protectedRoute);
 
 app.listen({ port: 3000 }, (err, address) => {
 	if (err) {
