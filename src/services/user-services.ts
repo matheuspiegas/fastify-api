@@ -1,5 +1,5 @@
 import type { UserRepository } from "../repository/user-repository";
-import type { CreateUserSchema } from "../schemas/user-schemas.ts";
+import type { RegisterUserSchema } from "../schemas/user-schemas.ts";
 
 export class UserServices {
 	repository: UserRepository;
@@ -15,12 +15,16 @@ export class UserServices {
 		const user = await this.repository.findUserByUsername(username);
 		return user;
 	};
+	findUserById = async (id: string) => {
+		const user = await this.repository.findUserById(id)
+		return user
+	}
 	createUser = async ({
 		email,
 		password,
 		username,
 		name,
-	}: CreateUserSchema) => {
+	}: RegisterUserSchema) => {
 		const user = await this.repository.createUser({
 			email,
 			password,
