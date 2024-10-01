@@ -1,7 +1,11 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { UserServices } from "../services/user-services";
 import bcrypt from "bcryptjs";
-import { loginRouteSchema, registerUserSchema } from "../schemas/user-schemas";
+import {
+	loginRouteSchema,
+	updateUserSchema,
+	userSchema,
+} from "../schemas/user-schemas";
 
 export class UserController {
 	services: UserServices;
@@ -12,7 +16,7 @@ export class UserController {
 	}
 
 	async register(req: FastifyRequest, reply: FastifyReply) {
-		const { success, data, error } = registerUserSchema.safeParse(req.body);
+		const { success, data, error } = userSchema.safeParse(req.body);
 		if (!success) {
 			reply.code(400).send({
 				errors: error.errors.map((e) => {
@@ -77,6 +81,44 @@ export class UserController {
 	}
 
 	async updateProfile(req: FastifyRequest, reply: FastifyReply) {
-		
+		const { success, data, error } = updateUserSchema.safeParse(req.body);
+		const { id } = req.params as { id: string };
+		if (!success) {
+			reply.code(400).send({
+				errors: error.errors.map((e) => {
+					return { path: e.path[0], message: e.message };
+				}),
+			});
+			return;
+		}
+		const currentUser = new Map(Object.entries(data));
+		const updatedFields = new Map();
+		const existingUser = await this.services.findUserById(id);
+		if (existingUser) {
+			const existingUserMap = new Map(Object.entries(existingUser));
+			for (const [key, value] of currentUser.entries()) {
+				if (value !== existingUserMap.get(key)) {
+					updatedFields.set(key, value);
+					if (key === "password" && existingUserMap.get(key)) {
+						const existingPassword = existingUserMap.get(key);
+						if (existingPassword) {
+							const passwordMatch = bcrypt.compareSync(value, existingPassword);
+							if (passwordMatch) {
+								updatedFields.delete(key);
+							} else {
+								const hashedPassword = bcrypt.hashSync(value, 10);
+								updatedFields.set(key, hashedPassword);
+							}
+						}
+					}
+				}
+			}
+		}
+		//atualiza o usuario
+		const updatedUser = await this.services.updateUser(
+			id,
+			Object.fromEntries(updatedFields),
+		);
+		return updatedUser;
 	}
 }
