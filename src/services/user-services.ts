@@ -32,4 +32,9 @@ export class UserServices {
 		const userUpdated = await this.repository.updateUser(id, user);
 		return userUpdated;
 	};
+
+	deleteUser = async (id: string) => {
+		const user = await this.repository.deleteUser(id);
+		return user;
+	};
 }

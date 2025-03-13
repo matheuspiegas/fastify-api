@@ -42,6 +42,12 @@ export class UserRepository {
 				username,
 				name,
 			},
+			select: {
+				id: true,
+				username: true,
+				email: true,
+				name: true,
+			},
 		});
 		return user;
 	};
@@ -54,5 +60,20 @@ export class UserRepository {
 			data: user,
 		});
 		return userUpdated;
+	};
+
+	deleteUser = async (id: string) => {
+		const user = await this.database.user.delete({
+			where: {
+				id,
+			},
+			select: {
+				id: true,
+				username: true,
+				email: true,
+				name: true,
+			},
+		});
+		return user;
 	};
 }
