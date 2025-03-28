@@ -10,44 +10,40 @@ export class RefreshTokenController {
 		this.app = app;
 	}
 
-	async create(user: { username: string; id: string }, options: { expiresIn: string }) {
-		const refresh_token_response = await this.services.findRefreshTokenByUserId(user.id);
-		if (refresh_token_response) {
-			await this.services.deleteRefreshToken(refresh_token_response.id);
-		}
-
-		const refresh_token = this.app.jwt.sign(user, { expiresIn: options.expiresIn });
-		await this.services.createRefreshToken({
-			token: refresh_token,
-			userId: user.id,
-			expiresAt: // 7 days from now
-				new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-		});
-		return refresh_token;
-	}
-
 	async verify(req: FastifyRequest, res: FastifyReply) {
-		const refresh_token = req.cookies.refresh_token;
-		if (!refresh_token) {
+		const refreshToken = req.cookies.refresh_token;
+		if (!refreshToken) {
 			return res.code(401).send({ message: "Refresh token not found" });
 		}
-		const refresh_token_response = await this.services.findRefreshTokenByToken(refresh_token);
-		if (!refresh_token_response) {
+		const refreshTokenResponse = await this.services.verifyRefreshToken(refreshToken);
+		if (!refreshTokenResponse) {
 			return res.code(401).send({ message: "Invalid refresh token" });
 		}
-		const { token, userId } = refresh_token_response;
-		this.app.jwt.verify(token, (err) => {
-			if (err) {
-				return res.code(401).send({ message: "Invalid refresh token" });
-			}
-			const access_token = this.app.jwt.sign({ id: userId }, { expiresIn: "15s" });
-			return res
-				.setCookie("access_token", access_token, {
-					httpOnly: true,
-					sameSite: "strict",
-					path: "/",
-				})
-				.send({ access_token });
-		});
+		return res
+			.setCookie("access_token", refreshTokenResponse, {
+				httpOnly: true,
+				sameSite: "strict",
+				path: "/",
+			})
+			.send({ access_token: refreshTokenResponse });
+	}
+
+	async revoke(req: FastifyRequest, res: FastifyReply) {
+		const refreshToken = req.cookies.refresh_token;
+		if (!refreshToken) {
+			return res.code(401).send({ message: "Refresh token not found" });
+		}
+		const refreshTokenResponse = await this.services.revokeRefreshToken(refreshToken);
+		if (!refreshTokenResponse) {
+			return res.code(401).send({ message: "Invalid refresh token" });
+		}
+		return res
+			.clearCookie("refresh_token", {
+				path: "/refresh-token",
+			})
+			.clearCookie("access_token", {
+				path: "/",
+			})
+			.send({ message: "User logged out", success: true });
 	}
 }

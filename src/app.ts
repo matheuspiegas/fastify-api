@@ -6,6 +6,7 @@ import fastifyOauth2 from "@fastify/oauth2";
 import crypto from "node:crypto";
 import fastifyCookie from "@fastify/cookie";
 import fastifyCors from "@fastify/cors";
+import { refreshTokenRoutes } from "./routes/refresh-token-routes";
 export const app = fastify();
 
 app.register(fastifyCors, {
@@ -48,6 +49,7 @@ app.register(fastifyOauth2, {
 });
 
 app.register(userRoutes);
+app.register(refreshTokenRoutes);
 
 app.decorate("authentication", verifyToken);
 

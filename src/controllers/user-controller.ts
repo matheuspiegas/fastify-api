@@ -1,10 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import type { UserServices } from "../services/user-services.ts";
-import bcrypt from "bcryptjs";
-import { loginRouteSchema, userSchema } from "../schemas/user-schemas";
+import type { UserServices } from "../services/user-services.js";
+import { loginRouteSchema, userSchema } from "../schemas/user-schemas.js";
 import z from "zod";
-import type { RefreshTokenServices } from "../services/refresh-token-services.js";
-import { RefreshTokenController } from "./refresh-token-controller.js";
 
 interface UserInfo {
 	email: string;
@@ -16,12 +13,11 @@ interface UserInfo {
 }
 
 export class UserController {
-	services: UserServices;
-	refreshTokenServices: RefreshTokenServices;
-	app: FastifyInstance;
-	constructor(services: UserServices, app: FastifyInstance, refreshTokenServices: RefreshTokenServices) {
+	constructor(
+		private services: UserServices,
+		private app: FastifyInstance,
+	) {
 		this.services = services;
-		this.refreshTokenServices = refreshTokenServices;
 		this.app = app;
 	}
 
@@ -35,28 +31,15 @@ export class UserController {
 			});
 			return;
 		}
-
-		if (success) {
-			const { username, password, email, name } = data;
-			const hashedPassword = bcrypt.hashSync(password || "", 10);
-			const existingUsername = await this.services.findUserByUsername(username);
-			const existingUserEmail = await this.services.findUserByEmail(email);
-			if (existingUsername || existingUserEmail) {
-				reply.code(409).send({ message: "Username or email already in use" });
+		try {
+			const registerResponse = await this.services.register(data);
+			if (registerResponse?.success === false) {
+				reply.code(409).send({ message: registerResponse.message });
 				return;
 			}
-			const user = await this.services.createUser({
-				email,
-				password: hashedPassword,
-				username,
-				name,
-			});
-			reply.code(201).send({
-				id: user.id,
-				username: user.username,
-				email: user.email,
-				name: user.name,
-			});
+			return reply.code(201).send(registerResponse.user);
+		} catch (error) {
+			console.log(error);
 		}
 	}
 
@@ -70,43 +53,38 @@ export class UserController {
 			});
 			return;
 		}
-		const { username, password } = data;
-		const user = await this.services.findUserByUsername(username);
-		if (!user) {
-			reply.code(401).send({ message: "Invalid username or password" });
-			return;
-		}
-		const passwordMatch = await bcrypt.compare(password, user.password || "");
-		if (!passwordMatch) {
-			reply.code(401).send({ message: "Invalid username or password" });
-			return;
-		}
+		try {
+			const loginResponse = await this.services.login(data);
+			if (!loginResponse) {
+				reply.code(401).send({ message: "Invalid username or password" });
+				return;
+			}
 
-		const refresh_token = await new RefreshTokenController(this.refreshTokenServices, this.app).create(
-			{ username, id: user.id },
-			{ expiresIn: "7d" },
-		);
+			const { user, refreshToken } = loginResponse;
 
-		reply
-			.setCookie("refresh_token", refresh_token, {
-				httpOnly: true,
-				path: "/refresh-token",
-				sameSite: "strict",
-			})
-			.setCookie("access_token", this.app.jwt.sign({ username, id: user.id }, { expiresIn: "10s" }), {
-				httpOnly: true,
-				sameSite: "strict",
-				path: "/",
-			})
-			.send({
-				id: user.id,
-				username: user.username,
-				name: user.name,
-				email: user.email,
-			});
-		return;
+			return reply
+				.setCookie("refresh_token", refreshToken, {
+					httpOnly: true,
+					path: "/refresh-token",
+					sameSite: "strict",
+				})
+				.setCookie("access_token", this.app.jwt.sign({ username: user.username, id: user.id }, { expiresIn: "10s" }), {
+					httpOnly: true,
+					sameSite: "strict",
+					path: "/",
+				})
+				.send({
+					id: user.id,
+					username: user.username,
+					name: user.name,
+					email: user.email,
+				});
+		} catch (error) {
+			console.log(error);
+		}
 	}
 
+	//revisar
 	async loginWithGoogle(req: FastifyRequest, reply: FastifyReply) {
 		try {
 			const tokenResponse = await this.app.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(req);
@@ -121,6 +99,7 @@ export class UserController {
 			if (!userInfo || !userInfo.email) {
 				return reply.status(401).send({ error: "Falha ao autenticar com Google" });
 			}
+			console.log(userInfo);
 
 			const existingUserEmail = await this.services.findUserByEmail(userInfo.email);
 			if (!existingUserEmail) {
@@ -150,6 +129,7 @@ export class UserController {
 		}
 	}
 
+	//revisar
 	async deleteUser(req: FastifyRequest, reply: FastifyReply) {
 		const { id } = req.params as { id: string };
 		const deleteRouteSchema = z.string().uuid();
@@ -170,6 +150,7 @@ export class UserController {
 		return;
 	}
 
+	//revisar
 	async getUser(req: FastifyRequest, reply: FastifyReply) {
 		const user = (await req.jwtDecode()) as { id: string };
 		const existingUser = await this.services.findUserById(user.id);
@@ -185,6 +166,7 @@ export class UserController {
 		});
 	}
 
+	//revisar
 	async updateProfile(req: FastifyRequest, reply: FastifyReply) {
 		const { id } = req.params as { id: string };
 		const user = await this.services.findUserById(id);

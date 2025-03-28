@@ -19,3 +19,4 @@ export const loginRouteSchema = z.object({
 
 export type UserSchema = z.infer<typeof userSchema>;
 export type UpdateUserSchema = z.infer<typeof updateUserSchema>;
+export type LoginRouteSchema = z.infer<typeof loginRouteSchema>;
